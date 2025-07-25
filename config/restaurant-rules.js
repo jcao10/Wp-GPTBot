@@ -9,8 +9,8 @@ module.exports = {
     "restaurantInfo",
     "schedule",
     "reservationRules",
-    "policies",
-    "botBehavior",
+    // "policies", // Eliminado porque las políticas ahora se manejan en faq-data.txt
+    // "botBehavior", // Eliminado, las respuestas estándar están en faq-data.txt
     "validation",
     "features",
     "specialties",
@@ -50,48 +50,16 @@ module.exports = {
   },
 
   // Restaurant Policies
+  // La mayoría de estas políticas ahora se manejan a través del archivo faq-data.txt
+  // para permitir una edición más sencilla por parte del personal no técnico.
   policies: {
-    petsAllowed: {
-      interior: false, // No mascotas en interior
-      terraza: true    // Sí mascotas en terraza
-    },
-    dressCode: "Casual elegante - No shorts ni ojotas",
-    paymentMethods: [
-      "Efectivo", 
-      "Tarjeta de débito", 
-      "Tarjeta de crédito", 
-      "Transferencia bancaria",
-      "Mercado Pago"
-    ],
-    smokingPolicy: "Solo en terraza - No fumar en interior",
-    parking: "Estacionamiento gratuito disponible",
-    accessibility: "Acceso para sillas de ruedas disponible",
-    wifi: "WiFi gratuito disponible"
+    // Las políticas específicas como mascotas, código de vestimenta, etc., se han movido.
+    // Dejamos la estructura por si se necesita alguna política técnica en el futuro.
   },
 
   // Bot Behavior Rules
-  botBehavior: {
-    defaultLanguage: "spanish",
-    tone: "amigable y profesional, con toque argentino",
-    alwaysAskFor: ["name", "date", "time", "sector", "people"],
-    confirmationPolicy: "Antes de confirmar una reserva, debes asegurarte de que el cliente haya proporcionado y reconfirmado explícitamente su nombre, la fecha, la hora, el sector (interior o terraza) y la cantidad de personas. Si falta algún dato o hay dudas, vuelve a preguntar y confirma cada punto antes de finalizar la reserva.",
-    
-    // Standard responses - Personaliza estos mensajes
-    standardResponses: {
-      greeting: "¡Hola! Bienvenido/a a La Parrilla del Sur 🍖 ¿En qué puedo ayudarte hoy?",
-      menuInquiry: "¡Tenemos las mejores carnes de la zona! Nuestras especialidades incluyen bife de chorizo, entraña y costilla. También tenemos opciones vegetarianas. ¿Te gustaría hacer una reserva para probarlas?",
-      locationRequest: "Estamos en Av. San Martín 567, Palermo, Buenos Aires. Fácil acceso por colectivo o subte. ¿Te gustaría hacer una reserva?",
-      closedDay: "Los lunes permanecemos cerrados para descansar y preparar todo para la semana. Atendemos de martes a domingo de 19:00 a 23:30 hs.",
-      invalidTime: "Nuestros horarios de reserva son a las 20:00, 21:00 y 22:00 hs únicamente. ¿Cuál te resulta mejor?",
-      tooManyPeople: "El máximo por reserva es de 8 personas. Para grupos más grandes, por favor contactanos directamente al +54 11 4567-8901 y te ayudaremos con gusto.",
-      fullyBooked: "Lamentablemente no tenemos disponibilidad en ese horario. ¿Te gustaría ver otras opciones disponibles?",
-      thankYou: "¡Gracias por elegir La Parrilla del Sur! 🍖 Te esperamos con las mejores carnes y el mejor servicio.",
-      cancellationConfirm: "Tu reserva ha sido cancelada exitosamente. ¡Esperamos verte pronto en La Parrilla del Sur!",
-      specialRequest: "¡Por supuesto! Anotamos tu pedido especial. Nuestros chefs se encargarán de prepararlo especialmente para vos.",
-      parkingInfo: "Tenemos estacionamiento gratuito disponible. Solo avísanos cuando llegues.",
-      dressCodeInfo: "El código de vestimenta es casual elegante. No se permiten shorts ni ojotas."
-    }
-  },
+  // Esta sección ha sido eliminada. Las respuestas estándar se encuentran en 'config/faq-data.txt'.
+  // El tono y comportamiento se definirá directamente en los prompts de cada flujo.
 
   // Validation Rules
   validation: {

@@ -1,9 +1,12 @@
 const express = require('express');
-const router = express.Router();
-const { sendMessage } = require('../services/whatsapp'); // Import the sendMessage function
-const { getChatGptResponse } = require('../services/openai'); // Import the AI function
+const bodyParser = require('body-parser');
+const { sendMessage } = require('../services/whatsapp');
+const { orchestrateResponse } = require('../bot/orchestrator'); // Importamos desde el orquestador
 
-// Store processed message IDs to prevent duplicates
+const router = express.Router();
+router.use(bodyParser.json());
+
+// Almacenamiento en memoria para IDs de mensajes procesados para evitar duplicados.
 const processedMessages = new Set();
 
 // Webhook verification endpoint
@@ -26,66 +29,48 @@ router.get('/', (req, res) => {
 
 // Webhook to receive messages
 router.post('/', async (req, res) => {
-  let body = req.body;
+    try {
+        const entry = req.body.entry && req.body.entry[0];
+        const change = entry && entry.changes && entry.changes[0];
+        const message = change && change.value && change.value.messages && change.value.messages[0];
 
-  // console.log(JSON.stringify(req.body, null, 2)); // Comentado para limpiar el log
+        if (message) {
+            // ---- INICIO: Lógica de control de duplicados ----
+            if (processedMessages.has(message.id)) {
+                console.log(`[Webhook] Skipping duplicate message ID: ${message.id}`);
+                return res.sendStatus(200);
+            }
+            processedMessages.add(message.id);
+            // Limpiamos el set periódicamente para no consumir memoria infinita
+            if (processedMessages.size > 1000) {
+                const oldestMessages = Array.from(processedMessages).slice(0, 500);
+                oldestMessages.forEach(id => processedMessages.delete(id));
+            }
+            // ---- FIN: Lógica de control de duplicados ----
 
-  if (body.object) {
-    if (
-      body.entry &&
-      body.entry[0].changes &&
-      body.entry[0].changes[0] &&
-      body.entry[0].changes[0].value.messages &&
-      body.entry[0].changes[0].value.messages[0]
-    ) {
-      const message = body.entry[0].changes[0].value.messages[0];
-      
-      // Check if this is a real message (not a status update)
-      if (message.type !== 'text') {
-        console.log(`Skipping non-text message of type: ${message.type}`);
+            let userPhone = message.from; // Se cambia a let para poder modificarlo
+            const userMessage = message.text.body;
+
+            // Lógica de normalización reincorporada
+            if (userPhone.startsWith('549')) {
+                userPhone = '54' + userPhone.substring(3);
+                console.log(`Normalized phone number to: ${userPhone}`);
+            }
+
+            console.log(`Processing message from ${userPhone}: "${userMessage}"`);
+
+            // Llamamos al orquestador con el número YA normalizado
+            const response = await orchestrateResponse(userMessage, userPhone);
+
+            console.log(`🤖 Sending response to ${userPhone}: "${response}"`);
+            await sendMessage(userPhone, response);
+        }
+
         res.sendStatus(200);
-        return;
-      }
-
-      // Check for duplicate messages
-      if (processedMessages.has(message.id)) {
-        console.log(`Skipping duplicate message: ${message.id}`);
-        res.sendStatus(200);
-        return;
-      }
-
-      // Add message ID to processed set
-      processedMessages.add(message.id);
-      
-      // Clean up old message IDs (keep only last 1000)
-      if (processedMessages.size > 1000) {
-        const idsArray = Array.from(processedMessages);
-        processedMessages.clear();
-        idsArray.slice(-500).forEach(id => processedMessages.add(id));
-      }
-
-      let from = message.from; // Sender's phone number
-      const msg_body = message.text.body; // Message text
-
-      console.log(`Processing message from ${from}: "${msg_body}"`);
-
-      // Normalize the phone number for Argentina cases (remove the '9' after country code '54')
-      if (from.startsWith('549')) {
-        from = '54' + from.substring(3);
-        console.log(`Normalized phone number to: ${from}`);
-      }
-
-      // Get AI response and then send it (now passing the phone number)
-      const aiResponse = await getChatGptResponse(msg_body, from);
-      
-      console.log(`🤖 Sending response to ${from}: "${aiResponse}"`); // Log para ver la respuesta del bot
-      
-      await sendMessage(from, aiResponse);
+    } catch (error) {
+        console.error('Error en el webhook:', error);
+        res.sendStatus(500);
     }
-    res.sendStatus(200);
-  } else {
-    res.sendStatus(404);
-  }
 });
 
 module.exports = router; 
