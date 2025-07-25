@@ -1,0 +1,170 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# Step-by-Step Implementation Plan for WhatsApp AI Chatbot for Restaurant Reservations
+
+# PROJECT RULES
+1. Siempre contestar haciendo referencia al inicio de tu mensaje a la parte en la que que estamos trabajando, por ejemplo 1.1 o 2.1, 2.3 etc
+2. focus on obtaining user confirmation at each stage. Await feedback before proceeding to next step. I want to ensure my approach aligns perfectly with the user's expectations.
+
+## 1. Definición de Requerimientos
+1. Create `requirements.md` in project root.
+2. List functionalities: reservation management, confirmations, reminders, FAQs, modifications/cancellations, system integration, multilingual support, human handoff.
+3. Define technical requirements: WhatsApp Business API, Node.js (Express), MongoDB, Dialogflow/Rasa/xAI API, AWS/Heroku/Vercel, GDPR compliance.
+4. In Cursor, run: `cursor: generate project structure for WhatsApp chatbot with Node.js and MongoDB`.
+
+## 2. Configuración del Entorno de Desarrollo
+1. Install Cursor IDE.
+2. Install Node.js (v18+).
+3. Install Git.
+4. Create MongoDB Atlas account and set up a free cluster.
+5. Sign up for WhatsApp Business API at https://business.whatsapp.com/.f
+6. Install Ngrok for local webhook testing.
+7. Initialize project: `npm init -y`.
+8. Install dependencies: `npm install express mongoose axios dotenv`.
+9. Create `.env` file with `WHATSAPP_TOKEN`, `MONGODB_URI`, `PORT`.
+10. Set up project structure:
+    ```
+    restaurant-chatbot/
+    ├── src/
+    │   ├── api/
+    │   ├── bot/
+    │   ├── models/
+    │   ├── services/
+    │   └── utils/
+    ├── config/
+    ├── tests/
+    ├── package.json
+    └── README.md
+    ```
+11. In Cursor, run: `cursor: initialize Node.js project with Express and MongoDB`.
+12. Run: `cursor: generate gitignore for Node.js`.
+13. Run: `cursor: create .env.example with WHATSAPP_TOKEN, MONGODB_URI, PORT`.
+14. Create GitHub repository and push initial code: `git init`, `git add .`, `git commit -m "Initial commit"`, `git push origin main`.
+
+## 3. Configuración de WhatsApp Business API
+1. Register phone number in WhatsApp Business Platform.
+2. Obtain `WHATSAPP_TOKEN` and `PHONE_NUMBER_ID` from Meta dashboard.
+3. Create `/webhook` endpoint in `src/api/webhook.js`:
+    ```javascript
+    app.post('/webhook', (req, res) => {
+      const message = req.body.entry[0].changes[0].value.messages[0];
+      res.sendStatus(200);
+    });
+    ```
+4. In Cursor, run: `cursor: generate Express webhook endpoint for WhatsApp Business API`.
+5. Create function to send messages in `src/services/whatsapp.js`:
+    ```javascript
+    const axios = require('axios');
+    const sendMessage = async (to, text) => {
+      await axios.post(
+        'https://graph.facebook.com/v17.0/YOUR_PHONE_NUMBER_ID/messages',
+        { messaging_product: 'whatsapp', to, text: { body: text } },
+        { headers: { Authorization: `Bearer ${process.env.WHATSAPP_TOKEN}` } }
+      );
+    };
+    ```
+6. In Cursor, run: `cursor: create function to send WhatsApp message using axios`.
+7. Run Ngrok: `ngrok http 3000`.
+8. Configure webhook URL in WhatsApp Business dashboard with Ngrok URL.
+9. Test webhook by sending a test message to your WhatsApp number.
+
+## 4. Desarrollo de la Lógica del Chatbot
+1. Choose Dialogflow:
+   - Create Dialogflow ES agent at https://dialogflow.cloud.google.com/.
+   - Define intents: `book_table`, `cancel_reservation`, `ask_hours`, `ask_menu`.
+   - In Cursor, run: `cursor: generate Dialogflow intents for restaurant reservation chatbot`.
+2. Alternatively, install Rasa: `pip install rasa`.
+3. Create Rasa project: `rasa init`.
+4. Define intents and rules in `domain.yml` and `rules.yml` for reservations, cancellations, FAQs.
+5. In Cursor, run: `cursor: generate Rasa rules for handling restaurant reservations`.
+6. Create MongoDB schema in `src/models/reservation.js`:
+    ```javascript
+    const mongoose = require('mongoose');
+    const reservationSchema = new mongoose.Schema({
+      phone: String,
+      date: Date,
+      time: String,
+      people: Number,
+      preferences: String,
+      status: { type: String, enum: ['pending', 'confirmed', 'cancelled'], default: 'pending' },
+      createdAt: { type: Date, default: Date.now }
+    });
+    const Reservation = mongoose.model('Reservation', reservationSchema);
+    ```
+7. In Cursor, run: `cursor: create MongoDB schema for restaurant reservations`.
+8. Implement reservation flow in `src/bot/reservation.js`:
+   - Parse message for reservation details (date, time, people).
+   - Check availability in MongoDB.
+   - Save reservation and send confirmation.
+9. Implement cancellation flow in `src/bot/cancellation.js`:
+   - Parse cancellation request.
+   - Find and delete reservation in MongoDB.
+   - Send confirmation.
+10. Connect Dialogflow/Rasa to WhatsApp webhook in `src/api/webhook.js`.
+
+## 5. Integración con Sistema de Reservas
+1. Create availability model in `src/models/availability.js`:
+    ```javascript
+    const mongoose = require('mongoose');
+    const availabilitySchema = new mongoose.Schema({
+      date: Date,
+      time: String,
+      availableTables: Number
+    });
+    const Availability = mongoose.model('Availability', availabilitySchema);
+    ```
+2. In Cursor, run: `cursor: generate API call to check restaurant table availability`.
+3. Implement reservation check in `src/services/reservations.js`:
+   - Query `Availability` for requested date/time.
+   - If available, save reservation and update `availableTables`.
+4. If using external system (e.g., CoverManager):
+   - Obtain API documentation from provider.
+   - Create endpoint to call external API for availability.
+   - In Cursor, run: `cursor: generate API integration for CoverManager reservations`.
+5. Install `node-cron`: `npm install node-cron`.
+6. Create reminder job in `src/services/reminders.js`:
+    ```javascript
+    const cron = require('node-cron');
+    cron.schedule('0 0 * * *', async () => {
+      const reservations = await Reservation.find({ date: /* tomorrow */, status: 'confirmed' });
+      reservations.forEach((res) => sendMessage(res.phone, `Recordatorio: Tu reserva para ${res.people} personas mañana a las ${res.time} está confirmada.`));
+    });
+    ```
+7. In Cursor, run: `cursor: create node-cron job for sending WhatsApp reservation reminders`.
+
+## 6. Panel de Administración (Optional)
+1. Initialize React app: `npx create-react-app admin-panel`.
+2. Create components for listing, editing, and canceling reservations.
+3. Create API endpoints in `src/api/reservations.js` for CRUD operations.
+4. In Cursor, run: `cursor: generate React dashboard for managing restaurant reservations`.
+5. Deploy to GitHub Pages: `npm install gh-pages`, `npm run build`, `npx gh-pages -d build`.
+6. In Cursor, run: `cursor: deploy React app to GitHub Pages`.
+
+## 7. Pruebas y Validación
+1. Install Jest: `npm install --save-dev jest`.
+2. Write unit tests for webhook and reservation logic in `tests/`.
+3. In Cursor, run: `cursor: generate Jest tests for WhatsApp chatbot endpoints`.
+4. Test reservation flow with Ngrok and WhatsApp.
+5. Simulate FAQs and cancellations.
+6. Invite 5-10 customers to test chatbot and collect feedback.
+
+## 8. Despliegue y Escalabilidad
+1. Deploy backend to Heroku: `heroku create`, `git push heroku main`.
+2. In Cursor, run: `cursor: generate deployment script for Heroku`.
+3. Set up MongoDB Atlas in production.
+4. Configure webhook with production URL (HTTPS).
+5. Install Redis: `npm install redis`.
+6. Configure Redis for message queueing in `src/services/queue.js`.
+7. Install Winston: `npm install winston`.
+8. In Cursor, run: `cursor: configure Winston logging for Node.js app`.
+9. Set up New Relic for monitoring.
+
+## 9. Mantenimiento y Optimización
+1. Log interactions in MongoDB: `{ user: phone, message: text, response: text, timestamp: Date }`.
+2. In Cursor, run: `cursor: generate MongoDB queries to analyze chatbot usage`.
+3. Re-train Dialogflow/Rasa with new conversation data.
+4. In Cursor, run: `cursor: update Dialogflow intents with new reservation scenarios`.
+5. Add new intents for menu suggestions or event bookings as needed.
